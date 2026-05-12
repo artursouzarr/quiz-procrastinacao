@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import { getQuizResponseId } from '@/lib/session'
 
 type DisposicaoOpcao = 'ate_10' | 'ate_5' | 'so_gratis' | 'nao_pagaria'
@@ -37,16 +36,21 @@ export default function ValidationForm({ onConcluir }: Props) {
     setEnviando(true)
     const responseId = getQuizResponseId()
 
-    if (supabase && responseId) {
+    if (responseId) {
       try {
-        await supabase
-          .from('quiz_responses')
-          .update({
-            dor_aberta: dor || null,
-            disposicao_pagar: disposicao,
-            canal_origem: canal,
-          })
-          .eq('id', responseId)
+        await fetch('/api/quiz', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'update_quiz_response',
+            data: {
+              id: responseId,
+              dor_aberta: dor || null,
+              disposicao_pagar: disposicao,
+              canal_origem: canal,
+            },
+          }),
+        })
       } catch (e) {
         console.error('Erro ao salvar validação:', e)
       }

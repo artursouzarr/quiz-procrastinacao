@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { perguntas } from '@/lib/quiz-data'
 import type { PerfilId } from '@/lib/quiz-data'
 import { calcularPerfil } from '@/lib/scoring'
-import { supabase } from '@/lib/supabase'
 import { getSessionId, setQuizResponseId, setStartTime, getStartTime } from '@/lib/session'
 import ProgressBar from '@/components/ProgressBar'
 import QuizQuestion from '@/components/QuizQuestion'
@@ -43,11 +42,13 @@ export default function QuizPage() {
         ? new URLSearchParams(window.location.search)
         : null
 
-      if (supabase) {
-        try {
-          const { data, error } = await supabase
-            .from('quiz_responses')
-            .insert({
+      try {
+        const response = await fetch('/api/quiz', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'insert_quiz_response',
+            data: {
               session_id: sessionId,
               perfil_resultado: perfil,
               pontuacao,
@@ -57,16 +58,15 @@ export default function QuizPage() {
               utm_source: params?.get('utm_source') ?? null,
               utm_medium: params?.get('utm_medium') ?? null,
               utm_campaign: params?.get('utm_campaign') ?? null,
-            })
-            .select('id')
-            .single()
-
-          if (!error && data?.id) {
-            setQuizResponseId(String(data.id))
-          }
-        } catch (e) {
-          console.error('Erro ao salvar resposta no Supabase:', e)
+            },
+          }),
+        })
+        const result = await response.json()
+        if (result.id) {
+          setQuizResponseId(String(result.id))
         }
+      } catch (e) {
+        console.error('Erro ao salvar quiz:', e)
       }
 
       router.push(`/resultado/${perfil}`)

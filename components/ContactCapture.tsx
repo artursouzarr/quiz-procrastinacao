@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import { getQuizResponseId } from '@/lib/session'
 
 type TipoContato = 'whatsapp' | 'instagram'
@@ -54,26 +53,28 @@ export default function ContactCapture({ onConcluir, onPular }: Props) {
       ? `@${contato}`
       : contato
 
-    if (supabase) {
-      try {
-        const { error } = await supabase.from('leads').insert({
-          quiz_response_id: responseId,
-          tipo_contato: tipo,
-          contato: contatoFinal,
-        })
-
-        if (error) {
-          if (error.code === '23505') {
-            setJaNaLista(true)
-            setEnviando(false)
-            setTimeout(onConcluir, 2000)
-            return
-          }
-          console.error('Erro ao salvar lead:', error)
-        }
-      } catch (e) {
-        console.error('Erro inesperado ao salvar lead:', e)
+    try {
+      const response = await fetch('/api/quiz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'insert_lead',
+          data: {
+            quiz_response_id: responseId,
+            tipo_contato: tipo,
+            contato: contatoFinal,
+          },
+        }),
+      })
+      const result = await response.json()
+      if (result.already_exists) {
+        setJaNaLista(true)
+        setEnviando(false)
+        setTimeout(onConcluir, 2000)
+        return
       }
+    } catch (e) {
+      console.error('Erro ao salvar lead:', e)
     }
 
     setEnviando(false)
